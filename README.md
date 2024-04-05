@@ -11,22 +11,28 @@ This is my first time writing C/C++ and my first time working with hardware like
 The working features are:
 * Wi-Fi
 * Custom Fonts
+* Partial Display Updates
+* Lower Power Mode
+  * Waking Up Using Button
+* Real Time Clock
+* Writing to Files
 
 The features still to be implemented:
-* Partial Updates
 * HTTP Requests
 * JSON Parsing
 * Touchscreen
-* Lower Power Mode
 * Logging
   * Logging to SD card
   * Logging to Network
 * Debugging
+* Tests
 
 The excluded features are:
 * HTTPS Requests
   * My follow on project will use a local server to reduce the number of network
     requests the Inkplate has to made, so HTTPS won't be needed.
+* Bluetooth
+* Serial Communication
 
 ## Build Flags
 
@@ -34,6 +40,6 @@ The project has the following build flags.
 
 | Variable | Description | Required |
 | ------ | ------ | ------ |
-| `WIFI_SSID` | The SSID of a Wi-if network to connect to. | |
-| `WIFI_PASSWORD` | The Password of a Wi-if network to connect to. | |
+| `WIFI_SSID` | The SSID of a Wi-Fi network to connect to. | |
+| `WIFI_PASSWORD` | The Password of a Wi-Fi network to connect to. | |
 | `BATTERY_LOG_FILE` | A CSV file to record battery voltages to. | |
