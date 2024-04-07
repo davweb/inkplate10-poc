@@ -27,7 +27,7 @@ void fileDateTime(uint16_t* date, uint16_t* time) {
     uint8_t hour = display.rtcGetHour();
     uint8_t minute = display.rtcGetMinute();
     uint8_t second = display.rtcGetSecond();
-    LOG_TRACE("Setting file date time", year, "-", month, "-", day, " ", hour, ":", minute, ":", second);
+    LOG_TRACE("Setting file date time", year, month, day, hour, minute, second);
     *date = FAT_DATE(year, month, day);
     *time = FAT_TIME(hour, minute, second);
 }

@@ -17,10 +17,10 @@ The working features are:
 * Real Time Clock
 * Writing to Files
 * Logging
-
-The features still to be implemented:
 * HTTP Requests
 * JSON Parsing
+
+The features still to be implemented:
 * Touchscreen
 * Tests
 

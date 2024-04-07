@@ -4,6 +4,7 @@
 #include <Fonts.h>
 #include <Sdcard.h>
 #include <ClockTools.h>
+#include <HttpTools.h>
 
 #define REFRESH_COUNT 10 // How often we do a full refresh
 
@@ -27,7 +28,9 @@ RTC_DATA_ATTR bool wiFiConnected = false;
 RTC_DATA_ATTR int8_t temperature = 0;
 RTC_DATA_ATTR double batteryVoltage = 0;
 RTC_DATA_ATTR char macAddress[18] = { 0 };
-RTC_DATA_ATTR char ipAddress[16] = { 0 };
+RTC_DATA_ATTR char localIpAddress[16] = { 0 };
+RTC_DATA_ATTR char publicIpAddress[16] = { 0 };
+RTC_DATA_ATTR char location[40] = { 0 };
 RTC_DATA_ATTR char dimensions[10] = { 0 };
 RTC_DATA_ATTR char currentTime[6] = { 0 };
 RTC_DATA_ATTR int count = 0;
@@ -167,23 +170,58 @@ void renderState() {
     displayValue("Network connected", wiFiConnected ? "Yes" : "No");
 
     if (wiFiConnected) {
-        displayValue("IP address", ipAddress);
+        displayValue("Local IP address", localIpAddress);
+        displayValue("Public IP address", publicIpAddress);
+        displayValue("Location", location);
     }
 }
 
 // Update the state of the Inkplate
 void getState() {
+    connectWiFi();
+
     sdCardOk = display.getSdCardOk();
     temperature = display.readTemperature();
     batteryVoltage = display.readBattery();
     wiFiConnected = display.isConnected();
 
     if (wiFiConnected) {
-        WiFi.localIP().toString().toCharArray(ipAddress, 16);
+        WiFi.localIP().toString().toCharArray(localIpAddress, 16);
+
+        JsonDocument doc;
+
+        if (getJsonFromUrl(doc, "http://ip-api.com/json/?fields=status,query,city,country")) {
+            String status = doc["status"];
+
+            if (status == "success") {
+                String query = doc["query"];
+                query.toCharArray(publicIpAddress, 16);
+                LOG_TRACE("Public IP address", publicIpAddress);
+
+                // Weird bug when I used String instead of const char* in sprintf
+                const char* city = doc["city"];
+                const char* country = doc["country"];
+                sprintf(location, "%s, %s", city, country);
+                LOG_TRACE("Location", location);
+            }
+            else {
+                LOG_WARN("query IP address API failed");
+                publicIpAddress[0] = '\0';
+                location[0] = '\0';
+            }
+        }
+        else {
+            LOG_WARN("Failed to query IP address API");
+            publicIpAddress[0] = '\0';
+            location[0] = '\0';
+        }
     }
     else {
-        ipAddress[0] = '\0';
+        localIpAddress[0] = '\0';
+        publicIpAddress[0] = '\0';
     }
+
+    disconnectWiFi();
 }
 
 // Display a label and value on the screen
@@ -232,12 +270,12 @@ void renderTime(bool black) {
 #ifdef BATTERY_LOG_FILE
     // Log battery level
     void logBatteryLevel() {
-        char dataToWrite[26];
+        char dataToWrite[25];
         char dateTime[20];
         getCurrentDateTime(dateTime);
 
         sprintf(dataToWrite,
-            "%s,%.2f\n",
+            "%s,%.2f",
             dateTime,
             display.readBattery());
 
@@ -257,6 +295,7 @@ void renderTime(bool black) {
         else
         {
             file.write(dataToWrite);
+            file.write("\n");
             file.close();
         }
     }

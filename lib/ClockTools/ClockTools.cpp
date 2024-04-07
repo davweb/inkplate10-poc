@@ -1,6 +1,8 @@
 #include <Inkplate.h>
 #include <DebugLog.h>
+#include <ArduinoJson.h>
 #include "ClockTools.h"
+#include "HttpTools.h"
 
 extern Inkplate display;
 
@@ -10,6 +12,19 @@ bool setRtcClock() {
     if (!display.getNTPEpoch(&epoch)) {
         LOG_ERROR("Failed to get time from NTP server");
         return false;
+    }
+
+    JsonDocument doc;
+    int offset;
+
+    if (!getJsonFromUrl(doc, "http://ip-api.com/json/?fields=status,timezone,offset")) {
+        LOG_WARN("Failed to get timezone from IP API. Using UTC.");
+    }
+    else {
+        String timezone = doc["timezone"];
+        int offset = doc["offset"];
+        LOG_INFO("Timezone", timezone, "with offset", offset);
+        epoch += offset;
     }
 
     display.rtcSetEpoch(epoch);
