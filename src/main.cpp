@@ -1,28 +1,26 @@
 #include <Inkplate.h>
-#include <rom/rtc.h>
-#include <Roboto_Regular16pt7b.h>
-#include <Roboto_Bold16pt7b.h>
-#include <Roboto_Bold24pt7b.h>
-#include <RobotoMono_VariableFont_wght20pt7b.h>
+#include <DebugLog.h>
+#include <Sleep.h>
+#include <Fonts.h>
+#include <Sdcard.h>
+#include <ClockTools.h>
 
-#define uS_TO_S_FACTOR 1000000 // Conversion factor for seconds to micro seconds
 #define REFRESH_COUNT 10 // How often we do a full refresh
 
 void boot();
 bool connectWiFi();
 bool disconnectWiFi();
-bool setRtcClock();
-bool startSdCard();
 bool getStaticState();
 void renderTime(bool black);
 void displayValue(const String &label, const String &value);
 void logBatteryLevel();
 void initialise(const String &label, bool(&func)());
-void getCurrentTime();
 void renderState();
 void getState();
-void fileDateTime(uint16_t* date, uint16_t* time);
 
+
+// We store state in RTC memory so it persists across deep sleep and can be used
+// to populate screen buffer
 RTC_DATA_ATTR bool booted = false;
 RTC_DATA_ATTR bool sdCardOk = false;
 RTC_DATA_ATTR bool wiFiConnected = false;
@@ -44,19 +42,17 @@ SdFile file;
 // Entry point
 void setup() {
     Serial.begin(115200);
+
     display.begin();
 
     if (!booted) {
         boot();
     }
 
-
-    esp_sleep_wakeup_cause_t wakeup_reason;
-    wakeup_reason = esp_sleep_get_wakeup_cause();
-    switch (wakeup_reason)
+    switch (getWakeReason())
     {
         // Woken from sleep by timer
-        case ESP_SLEEP_WAKEUP_TIMER:
+        case ALARM:
             count += 1;
 
             if (count == REFRESH_COUNT) {
@@ -65,12 +61,11 @@ void setup() {
 
             break;
         // Woken from sleep by button
-        case ESP_SLEEP_WAKEUP_EXT0:
-            Serial.println("Wake up caused by button");
+        case BUTTON:
             count = 0;
             break;
         // Was not sleeping
-        default:
+        case NOT_SLEEPING:
             count = 0;
             break;
     }
@@ -85,7 +80,7 @@ void setup() {
 
         // Update State
         getState();
-        getCurrentTime();
+        getCurrentTime(currentTime);
 
         // Redraw the whole screen with up to date values
         display.clearDisplay();
@@ -95,13 +90,14 @@ void setup() {
     }
     else {
         // Redraw the whole screen with values from before sleep and load it in the buffer
+        display.clearDisplay();
         renderState();
         renderTime(true);
         display.preloadScreen();
 
         // Wipe old time and write new time
         renderTime(false);
-        getCurrentTime();
+        getCurrentTime(currentTime);
         renderTime(true);
 
         // Force a partial update
@@ -111,13 +107,8 @@ void setup() {
     // Sleep until the top of the next minute
     display.rtcGetRtcData();
     uint8_t second = display.rtcGetSecond();
-    uint8_t timeToSleepSeconds = 60 - second;
-    esp_sleep_enable_timer_wakeup(timeToSleepSeconds * uS_TO_S_FACTOR);
-
-    // Wake up on button
-    esp_sleep_enable_ext0_wakeup(GPIO_NUM_36, LOW);
-
-    esp_deep_sleep_start();
+    uint16_t timeToSleepSeconds = 60 - second;
+    deepSleep(timeToSleepSeconds);
 }
 
 // Main loop
@@ -127,7 +118,7 @@ void loop() {
 
 // Perform one time initialisation
 void boot() {
-    Serial.println("Booting...");
+    LOG_DEBUG("Booting...");
 
     display.setFont(&RobotoMono_VariableFont_wght20pt7b);
     display.clearDisplay();
@@ -163,19 +154,7 @@ bool getStaticState() {
     return true;
 }
 
-// Initialise the SD card, logging on failure
-bool startSdCard() {
-    SdFile::dateTimeCallback(fileDateTime);
-    int16_t result = display.sdCardInit();
 
-    if (result == 1) {
-        return true;
-    }
-    else {
-        Serial.println("SD card init failed");
-        return false;
-    }
-}
 
 // Render the state of the Inkplate on the screen apart from the Time
 void renderState() {
@@ -223,7 +202,7 @@ bool connectWiFi() {
     #ifdef WIFI_SSID
         return display.connectWiFi(WIFI_SSID, WIFI_PASSWORD, 15);
     #else
-        Serial.println("No WiFi credentials provided");
+        LOG_WARN("No WiFi credentials provided");
         return false;
     #endif
 }
@@ -242,28 +221,6 @@ bool disconnectWiFi() {
     #endif
 }
 
-
-// Fetch time from NTP server and set the RTC
-bool setRtcClock() {
-    long epoch;
-    if (!display.getNTPEpoch(&epoch)) {
-        Serial.println("Failed to get time from NTP server");
-        return false;
-    }
-
-    display.rtcSetEpoch(epoch);
-    return true;
-}
-
-// Get the current time and store in a state variable
-void getCurrentTime() {
-    display.rtcGetRtcData();
-    uint8_t hour = display.rtcGetHour();
-    uint8_t minute = display.rtcGetMinute();
-    uint8_t second = display.rtcGetSecond();
-    sprintf(currentTime, "%02d:%02d", hour, minute);
-}
-
 // Show the current time on the screen, optionally in white to clear previous value
 void renderTime(bool black) {
     display.setTextColor(black ? BLACK : WHITE);
@@ -275,28 +232,27 @@ void renderTime(bool black) {
 #ifdef BATTERY_LOG_FILE
     // Log battery level
     void logBatteryLevel() {
+        char dataToWrite[26];
+        char dateTime[20];
+        getCurrentDateTime(dateTime);
+
+        sprintf(dataToWrite,
+            "%s,%.2f\n",
+            dateTime,
+            display.readBattery());
+
+        LOG_TRACE("Battery level", dataToWrite);
+
         if (!display.getSdCardOk()) {
-            Serial.println("SD card not available");
+            LOG_WARN("SD card not available");
             return;
         }
 
         const char* fileName = BATTERY_LOG_FILE;
-        char dataToWrite[26];
-        display.rtcGetRtcData();
-
-        sprintf(dataToWrite,
-            "%4d-%02d-%02d %02d:%02d:%02d,%.2f\n",
-            display.rtcGetYear(),
-            display.rtcGetMonth(),
-            display.rtcGetDay(),
-            display.rtcGetHour(),
-            display.rtcGetMinute(),
-            display.rtcGetSecond(),
-            display.readBattery());
 
         if (!file.open(fileName, FILE_WRITE))
         {
-            Serial.print("Error while writing to file");
+            LOG_WARN("Error writing battery level to file");
         }
         else
         {
@@ -307,15 +263,4 @@ void renderTime(bool black) {
 #endif
 
 
-// Callback for adding current date and time to SD file
-void fileDateTime(uint16_t* date, uint16_t* time) {
-    display.rtcGetRtcData();
-    byte year = display.rtcGetYear();
-    byte month = display.rtcGetMonth();
-    byte day = display.rtcGetDay();
-    byte hour = display.rtcGetHour();
-    byte minute = display.rtcGetMinute();
-    byte second = display.rtcGetSecond();
-    *date = FAT_DATE(year, month, day);
-    *time = FAT_TIME(hour, minute, second);
-}
+

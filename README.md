@@ -16,15 +16,12 @@ The working features are:
   * Waking Up Using Button
 * Real Time Clock
 * Writing to Files
+* Logging
 
 The features still to be implemented:
 * HTTP Requests
 * JSON Parsing
 * Touchscreen
-* Logging
-  * Logging to SD card
-  * Logging to Network
-* Debugging
 * Tests
 
 The excluded features are:
@@ -33,6 +30,8 @@ The excluded features are:
     requests the Inkplate has to made, so HTTPS won't be needed.
 * Bluetooth
 * Serial Communication
+* Debugging
+  * As far as I can tell debugging for the Inkplate is limited to serial messages
 
 ## Build Flags
 
