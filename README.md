@@ -10,6 +10,7 @@ This is my first time writing C/C++ and my first time working with hardware like
 ## Features
 The working features are:
 * Wi-Fi
+  * Static IP Address
 * Custom Fonts
 * Partial Display Updates
 * Lower Power Mode
@@ -23,15 +24,17 @@ The working features are:
 The features still to be implemented:
 * Touchscreen
 * Tests
+* Dev and Production Builds
 
 The excluded features are:
+* Bluetooth
+* Serial Communication
 * HTTPS Requests
   * My follow on project will use a local server to reduce the number of network
     requests the Inkplate has to made, so HTTPS won't be needed.
-* Bluetooth
-* Serial Communication
 * Debugging
-  * As far as I can tell debugging for the Inkplate is limited to serial messages
+  * As far as I can tell debugging for the Inkplate is limited to serial
+    messages due to the version of the ESP32 used.
 
 ## Build Flags
 
@@ -41,4 +44,9 @@ The project has the following build flags.
 | ------ | ------ | ------ |
 | `WIFI_SSID` | The SSID of a Wi-Fi network to connect to. | |
 | `WIFI_PASSWORD` | The Password of a Wi-Fi network to connect to. | |
+| `WIFI_IP_ADDRESS` | An IP address to use if not using DHCP | |
+| `WIFI_GATEWAY` | The gateway to use if not using DHCP. | |
+| `WIFI_SUBNET` | The subnet mask to use if not using DHCP. | |
+| `WIFI_DNS1` | The first DNS server to use if not using DHCP. | |
+| `WIFI_DNS1` | The second DNS server to use if not using DHCP. | |
 | `BATTERY_LOG_FILE` | A CSV file to record battery voltages to. | |

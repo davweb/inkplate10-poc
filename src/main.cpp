@@ -5,12 +5,11 @@
 #include <Sdcard.h>
 #include <ClockTools.h>
 #include <HttpTools.h>
+#include <Wireless.h>
 
 #define REFRESH_COUNT 10 // How often we do a full refresh
 
 void boot();
-bool connectWiFi();
-bool disconnectWiFi();
 bool getStaticState();
 void renderTime(bool black);
 void displayValue(const String &label, const String &value);
@@ -129,9 +128,9 @@ void boot() {
     display.display();
 
     initialise("Getting properties", getStaticState);
-    initialise("Connecting to WiFi", connectWiFi);
+    initialise("Connecting to WiFi", startWiFi);
     initialise("Setting time", setRtcClock);
-    initialise("Disconnecting WiFi", disconnectWiFi);
+    initialise("Disconnecting WiFi", stopWiFi);
 
     display.partialUpdate();
     booted = true;
@@ -157,8 +156,6 @@ bool getStaticState() {
     return true;
 }
 
-
-
 // Render the state of the Inkplate on the screen apart from the Time
 void renderState() {
     display.setCursor(30, 50);
@@ -178,7 +175,7 @@ void renderState() {
 
 // Update the state of the Inkplate
 void getState() {
-    connectWiFi();
+    startWiFi();
 
     sdCardOk = display.getSdCardOk();
     temperature = display.readTemperature();
@@ -186,7 +183,7 @@ void getState() {
     wiFiConnected = display.isConnected();
 
     if (wiFiConnected) {
-        WiFi.localIP().toString().toCharArray(localIpAddress, 16);
+        getLocalIpAddress().toCharArray(localIpAddress, 16);
 
         JsonDocument doc;
 
@@ -221,7 +218,7 @@ void getState() {
         publicIpAddress[0] = '\0';
     }
 
-    disconnectWiFi();
+    stopWiFi();
 }
 
 // Display a label and value on the screen
@@ -233,30 +230,6 @@ void displayValue(const String &label, const String &value) {
     display.setFont(&Roboto_Regular16pt7b);
     display.println(value);
     display.setCursor(x, display.getCursorY());
-}
-
-// Connect the Wifi
-bool connectWiFi() {
-    #ifdef WIFI_SSID
-        return display.connectWiFi(WIFI_SSID, WIFI_PASSWORD, 15);
-    #else
-        LOG_WARN("No WiFi credentials provided");
-        return false;
-    #endif
-}
-
-bool disconnectWiFi() {
-    #ifdef WIFI_SSID
-        if (!display.isConnected()) {
-            return false;
-        }
-        else {
-            display.disconnect();
-            return true;
-        }
-    #else
-        return false;
-    #endif
 }
 
 // Show the current time on the screen, optionally in white to clear previous value
