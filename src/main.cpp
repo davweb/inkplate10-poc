@@ -241,7 +241,7 @@ void renderTime(bool black) {
 }
 
 #ifdef BATTERY_LOG_FILE
-    // Log battery level
+    // Log battery level to file on the SD card
     void logBatteryLevel() {
         char dataToWrite[25];
         char dateTime[20];

@@ -75,5 +75,5 @@ bool isWiFiConnected() {
 }
 
 String getLocalIpAddress() {
-    return WiFi.localIP().toString();
+    return isWiFiConnected() ? WiFi.localIP().toString() : "";
 }
