@@ -1,7 +1,9 @@
 #include <WiFi.h>
 #include <DebugLog.h>
 #include "Wireless.h"
+#include "WirelessConfig.h"
 
+// If we have a static IP we don't need to wait as long for the connection
 #ifdef WIFI_IP_ADDRESS
     #define CONNECTION_INTERVAL_MS 40
     #define CONNECTION_TIMEOUT_MS 400
@@ -15,65 +17,78 @@ bool startWiFi() {
     #ifndef WIFI_SSID
         LOG_ERROR("No WiFi credentials provided");
         return false;
-    #endif
+    #else
+        WiFi.mode(WIFI_MODE_STA);
 
-    WiFi.mode(WIFI_MODE_STA);
+        #ifdef WIFI_IP_ADDRESS
+            IPAddress ipAddress, gateway, subnet, dns1, dns2;
+            ipAddress.fromString(WIFI_IP_ADDRESS);
+            gateway.fromString(WIFI_GATEWAY);
+            subnet.fromString(WIFI_SUBNET);
+            dns1.fromString(WIFI_DNS1);
+            dns2.fromString(WIFI_DNS2);
 
-    #ifdef WIFI_IP_ADDRESS
-        IPAddress ipAddress, gateway, subnet, dns1, dns2;
-        ipAddress.fromString(WIFI_IP_ADDRESS);
-        gateway.fromString(WIFI_GATEWAY);
-        subnet.fromString(WIFI_SUBNET);
-        dns1.fromString(WIFI_DNS1);
-        dns2.fromString(WIFI_DNS2);
+            if (WiFi.config(ipAddress, gateway, subnet, dns1, dns2)) {
+                LOG_DEBUG("Using static IP address", ipAddress);
+            }
+            else {
+                LOG_ERROR("Failed to set static IP address", ipAddress);
+                return false;
+            }
+        #else
+            LOG_DEBUG("Using DHCP IP address");
+        #endif
 
-        if (WiFi.config(ipAddress, gateway, subnet, dns1, dns2)) {
-            LOG_DEBUG("Using static IP address", ipAddress);
+        WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+        int time = 0;
+
+        while (!isWiFiConnected() && time < CONNECTION_TIMEOUT_MS) {
+            delay(CONNECTION_INTERVAL_MS);
+            time += CONNECTION_INTERVAL_MS;
+            LOG_TRACE("Have waited", time, "ms for WiFi connection");
         }
-        else {
-            LOG_ERROR("Failed to set static IP address", ipAddress);
+
+        if (!isWiFiConnected()) {
+            LOG_ERROR("Failed to connect to WiFi network", WIFI_SSID);
             return false;
         }
-    #else
-        LOG_DEBUG("Using DHCP IP address");
+
+        LOG_INFO("Connected to WiFi network", WIFI_SSID, "with IP address", getLocalIpAddress());
+        return true;
     #endif
-
-    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
-
-    int time = 0;
-
-    while (!isWiFiConnected() && time < CONNECTION_TIMEOUT_MS) {
-        delay(CONNECTION_INTERVAL_MS);
-        time += CONNECTION_INTERVAL_MS;
-        LOG_TRACE("Have waited", time, "ms for WiFi connection");
-    }
-
-    if (!isWiFiConnected()) {
-        LOG_ERROR("Failed to connect to WiFi network", WIFI_SSID);
-        return false;
-    }
-
-    LOG_INFO("Connected to WiFi network", WIFI_SSID, "with IP address", getLocalIpAddress());
-    return true;
 }
 
 bool stopWiFi() {
-    bool result = WiFi.disconnect();
+    #ifndef WIFI_SSID
+        LOG_ERROR("No WiFi credentials provided");
+        return false;
+    #else
+        bool result = WiFi.disconnect();
 
-    if (result) {
-        LOG_INFO("Disconnected from WiFi network");
-    }
-    else {
-        LOG_ERROR("Failed to disconnect from WiFi network");
-    }
+        if (result) {
+            LOG_INFO("Disconnected from WiFi network");
+        }
+        else {
+            LOG_ERROR("Failed to disconnect from WiFi network");
+        }
 
-    return result;
+        return result;
+    #endif
 }
 
 bool isWiFiConnected() {
-    return WiFi.status() == WL_CONNECTED;
+    #ifndef WIFI_SSID
+        return false;
+    #else
+        return WiFi.status() == WL_CONNECTED;
+    #endif
 }
 
 String getLocalIpAddress() {
-    return isWiFiConnected() ? WiFi.localIP().toString() : "";
+    #ifndef WIFI_SSID
+        return "";
+    #else
+        return isWiFiConnected() ? WiFi.localIP().toString() : "";
+    #endif
 }
