@@ -39,7 +39,8 @@ The excluded features are:
 * Debugging
   * As far as I can tell debugging for the Inkplate is limited to serial
     messages due to the version of the ESP32 used. The ESP32-S2 and ESP32-S3
-    have a built in JTAG interface but the XXX used by Inkplate 10 does not.
+    have a built in JTAG interface but the ESP32-D0WD-V3 used by my Inkplate 10
+    does not.
 * Detect when charging
   * [This is not possible with the Inkplate hardware.][2]
 
