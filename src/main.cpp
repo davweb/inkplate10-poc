@@ -122,7 +122,7 @@ void loop() {
 void boot() {
     LOG_DEBUG("Booting...");
 
-    display.setFont(&RobotoMono_VariableFont_wght20pt7b);
+    display.setFont(&RobotoMono_Regular20pt7b);
     display.clearDisplay();
     display.println("\n Booting...");
     display.display();
@@ -149,6 +149,8 @@ void initialise(const String &label, bool(&func)()) {
 
 // Read properties of Inkplate that won't change
 bool getStaticState() {
+    LOG_TRACE("Getting Static State");
+
     sprintf(dimensions, "%dx%d", display.width(), display.height());
     uint8_t mac[6];
     WiFi.macAddress(mac);
@@ -175,6 +177,8 @@ void renderState() {
 
 // Update the state of the Inkplate
 void getState() {
+    LOG_TRACE("Getting State");
+
     startWiFi();
 
     sdCardOk = display.getSdCardOk();

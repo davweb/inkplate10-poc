@@ -1,0 +1,5 @@
+{
+    "build": {
+        "extraScript": "convert_fonts.py"
+    }
+}
