@@ -11,13 +11,14 @@ FONTS = [
 ]
 
 OUTPUT_FILE = Path('src/Fonts.h')
+RESOURCES_DIR = Path('resources')
 
 OUTPUT_FILE.unlink(missing_ok=True)
-Path('resources').mkdir(exist_ok=True)
+RESOURCES_DIR.mkdir(exist_ok=True)
 
 with open(OUTPUT_FILE, 'w', encoding='utf-8') as font_header:
     for typeface, weight, sizes, font_url in FONTS:
-        ttf_file = Path(f'resources/{typeface}-{weight}.ttf')
+        ttf_file = RESOURCES_DIR / f'{typeface}-{weight}.ttf'
 
         if not ttf_file.exists():
             request.urlretrieve(font_url, ttf_file)
