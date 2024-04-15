@@ -23,16 +23,10 @@ The working features are:
 * JSON Parsing
 * Development and Production Builds
 
-The features still to be implemented:
-* Touchscreen
-* Tests
-* Wi-Fi
-  * Investigate `esp_wifi_set_storage`
-* Appropriate Partition Map
-
 The excluded features are:
+* Touchscreen
 * Bluetooth
-* Serial Communication
+* Two-Way Serial Communication
 * HTTPS Requests
   * My follow on project will use a local server to reduce the number of network
     requests the Inkplate has to made, so HTTPS won't be needed.
@@ -43,6 +37,13 @@ The excluded features are:
     does not.
 * Detect when charging
   * [This is not possible with the Inkplate hardware.][2]
+* Updated Partition Map
+  * I have not needed this yet.
+* Tests
+  * They seem unnecessary when the Inkplate is mostly just displaying things
+* Storing WiFi credentials in flash
+  * The `esp_wifi_set_storage` API call looks interesting but not worth writing
+    a whole WiFi client for.
 
 ## Build Flags
 
@@ -110,6 +111,12 @@ Here are instructions on how to build it on macOS:
     cd Adafruit-GFX-Library/fontconvert
     make
     ```
+
+## Downloading fonts
+
+If you have certificate errors when `convert_fonts.py` tries to download the
+source font files either set `platformio-ide.useBuiltinPython` to `false` or run
+the script outside of the PlatformIO build chain once to download the files.
 
 ## References
 
